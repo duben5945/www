@@ -1,0 +1,36 @@
+#安装samba 
+yum install samba samba-common -y
+useradd  -d /home/samba -m  smber #创建samba服务登录账户
+smbpasswd -a smber #smber 需要是系统已拥有用户
+smbpasswd #samba 账号管理工具
+pdbedit -Lv #查看所有用户的详细信息
+#vim /etc/samba/smb.conf
+[global]
+workgroup = samba
+server string = Samba Server Version %v
+log file = /var/log/samba/log.%m
+max log size = 1000
+security = user
+passdb backend = tdbsam
+load printers = yes
+cup options = raw
+[homes]
+comment = Home Directories
+browseable = no
+writable = yes
+create mask = 0700
+directory mask = 0700
+[printers]
+comment = All Printers
+path=/var/spool/samba
+browseable = no
+guest ok = no
+writable = no
+prinable = yes
+[public] #chmod
+comment = Public Directories
+path = /home/samba/public
+writable = yes 
+browseable = yes 
+guest ok = yes
+

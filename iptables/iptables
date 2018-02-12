@@ -1,0 +1,48 @@
+iptables -F #清除filter规则
+iptables -X
+iptables -F -t mangle
+iptables -t mangle -X
+iptables -F -t nat
+iptables -t nat -X
+iptables -P INPUT DROP #所有进入的包丢弃
+iptables -P OUTPUT ACCEPT #所有发出的包通过
+iptables -P FORWARD DROP #所有转发的包丢弃
+iptables -L #查看规则
+iptables -A INPUT -i lo -j ACCEPT #loop接口通过
+iptables -A OUTPUT -o lo -j ACCEPT 
+iptables -A INPUT -i eth0 -p icmp --icmp-type 8 -j ACCEPT #开启ping
+iptables -A OUTPUT -o eht0 -p icmp --icmp-type 8 -j ACCEPT
+iptables -A INPUT -i eth0 -s 192.168.11.1/24 -d 192.168.11.203 -p tcp --dport 22 -j ACCEPT #开启内网的ssh
+iptables -A INPUT -i eth0  -p tcp --dport 80 -m state --state NEW,ESTABLISHED -j ACCEPT #开启80端口
+iptables -A INPUT -i eth0 -p udp --dport 53 -j ACCEPT #开启DNS
+iptables -A INPUT -i eth0 -p tcp --dport 32768:61000 -m state --state ESTABLISHED -j ACCEPT 
+iptables -A INPUT -m limit 100/sec --limit-burst 200 -j ACCEPT #limit
+iptables -A INPUT -i eth0 -p tcp -m multiport --dports 22,80,443 -m state --state NEW,ESTABLISHED -j ACCEPT #多端口整合
+#samba
+iptables -A INPUT -p udp -s 192.168.11.0/24 --dport 137 -j ACCEPT
+iptables -A INPUT -p udp -s 192.168.11.0/24 --dport 138 -j ACCEPT
+iptables -A INPUT -p tcp -s 192.168.11.0/24 -m state --state NEW --dport 139 -j ACCEPT
+iptables -A INPUT -p tcp -s 192.168.11.0/24 -m state --state NEW --dport 445 -j ACCEPT
+#FTP
+PORT模式和PASV模式
+iptables -A INPUT -p tcp --dport 20 -j ACCEPT
+iptables -A INPUT -p tcp --dport 21 -j ACCEPT
+iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+添加ip_conntrack_ftp模块
+IPTABLES_MODULES="ip_contrack_ftp"
+
+#删除
+iptables -L -n --line-number
+
+#NAT
+modprobe ip_tables
+modprobe ip_nat_ftp
+#修改目的地址
+iptables -t nat -A PREROUTING -s 1.2.3.4 -i eth0 -j DNAT --to 192.168.1.254
+#修改源地址
+iptables -t nat -A POSTROUTING -s 192.168.1.254 -o eth0 -j SNAT --to 1.2.3.4
+#端口映射
+net.ipv4.ip_forward=1
+sysctl -p
+iptables -t nat -A PROROUTING -d 1.2.3.4 -p tcp --dport 80 -j DNAT --to 192.168.1.254:8080
+iptables -t nat -A POSTROUTING -s 192.168.1.254 -p tcp --dport 8080 -j SNAT --to 1.2.3.4:80
